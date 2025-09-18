@@ -1,0 +1,32 @@
+name: CI - Build and Run Java
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - feature/*
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout do código
+      uses: actions/checkout@v3
+
+    - name: Instalar Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Compilar arquivos Java
+      run: javac -d out src/main/java/com/sces/*.java
+
+    - name: Executar Main.java
+      run: java -cp out com.sces.Main
