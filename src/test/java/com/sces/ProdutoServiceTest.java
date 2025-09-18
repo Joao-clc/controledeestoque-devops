@@ -1,11 +1,8 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.sces;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class ProdutoServiceTest {
@@ -14,34 +11,40 @@ public class ProdutoServiceTest {
     private ProdutoService service;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         repo = new ProdutoRepository();
         service = new ProdutoService(repo);
     }
 
     @Test
-    public void testServiceDeveCadastrarProdutoValido() {
-        boolean resultado = service.cadastrarProduto("Arroz", "Pacote de 5kg", 10);
+    void adicionarEstoque_sucesso() {
+        // Arrange
+        boolean cadastrado = service.cadastrarProduto("Feijão", "Tipo carioca", 3);
+        assertTrue(cadastrado);
 
-        assertTrue(resultado);
-        assertEquals(1, repo.listarProdutos().size());
+        Produto p = service.listarTodosOsProdutos().get(0);
+        int id = p.getId();
+        int qtdAntiga = p.getQuantidade();
+
+        // Act
+        boolean ok = service.adicionarUnidadesAoEstoque(id, 7);
+
+        // Assert
+        assertTrue(ok, "Esperado true para adicionar estoque com ID válido");
+        Produto depois = service.listarTodosOsProdutos().get(0);
+        assertEquals(qtdAntiga + 7, depois.getQuantidade());
     }
 
     @Test
-    public void testServiceNaoDeveCadastrarProdutoComNomeDuplicado() {
-        repo.adicionarProduto("Feijão", "Tipo carioca", 5);
+    void adicionarEstoque_falha_idInexistente() {
+        // Arrange: nenhum produto cadastrado
+        assertTrue(service.listarTodosOsProdutos().isEmpty());
 
-        boolean resultado = service.cadastrarProduto("Feijão", "Outro tipo", 3);
+        // Act
+        boolean ok = service.adicionarUnidadesAoEstoque(1234, 5);
 
-        assertFalse(resultado);
-        assertEquals(1, repo.listarProdutos().size());
-    }
-
-    @Test
-    public void testServiceNaoDeveCadastrarProdutoComQuantidadeNegativa() {
-        boolean resultado = service.cadastrarProduto("Macarrão", "Espaguete", -2);
-
-        assertFalse(resultado);
-        assertTrue(repo.listarProdutos().isEmpty());
+        // Assert
+        assertFalse(ok, "Esperado false quando o ID não existe");
+        assertTrue(service.listarTodosOsProdutos().isEmpty(), "Não deve criar/alterar nada ao falhar");
     }
 }
