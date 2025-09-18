@@ -141,3 +141,4 @@ public class Main {
         return s.substring(0, Math.max(0, max - 1)) + "…";
     }
 }
+// teste
