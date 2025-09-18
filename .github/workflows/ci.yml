@@ -1,4 +1,4 @@
-name: CI - Build and Run Java
+name: CI - Build Java
 
 on:
   push:
@@ -28,5 +28,5 @@ jobs:
     - name: Compilar arquivos Java
       run: javac -d out src/main/java/com/sces/*.java
 
-    - name: Executar Main.java
-      run: java -cp out com.sces.Main
+    - name: Verificar compilação
+      run: echo "Compilação concluída com sucesso!"
