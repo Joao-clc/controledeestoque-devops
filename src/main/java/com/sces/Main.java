@@ -5,6 +5,7 @@ import java.util.Scanner;
 public class Main {
     public static void main(String[] args) {
         ProdutoRepository repo = new ProdutoRepository();
+        ProdutoService service = new ProdutoService(repo);
         Scanner scanner = new Scanner(System.in);
 
         System.out.println("=== Cadastro de Produtos ===");
@@ -25,7 +26,7 @@ public class Main {
                 continue;
             }
 
-            boolean sucesso = repo.adicionarProduto(nome, descricao, quantidade);
+            boolean sucesso = service.cadastrarProduto (nome, descricao, quantidade);
             if (sucesso) {
                 System.out.println("Produto adicionado com sucesso!");
             } else {
@@ -34,7 +35,7 @@ public class Main {
         }
 
         System.out.println("\n=== Lista de Produtos Cadastrados ===");
-        for (Produto p : repo.listarProdutos()) {
+        for (Produto p : service.listarTodosOsProdutos()) {
             System.out.println(p);
         }
 
