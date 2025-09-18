@@ -14,6 +14,7 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -26,14 +27,55 @@ jobs:
           java-version: '21'
           cache: 'maven'
 
-
       - name: Validate POM
         run: mvn -B -q -e -DskipTests=true validate
 
-      - name: Build & Test
+      # Testes unitários (JUnit 5)
+      - name: Build & Test (unit)
         run: mvn -B -q -e test
-        
-      
+
+      # Empacota classes para executar a Main nos smoke tests de console
+      - name: Package (classes)
+        run: mvn -B -q -e -DskipTests package
+
+      # 🔎 Smoke test 1: Lista vazia
+      # Fluxo: abrir app -> opção 2 (Listar) -> opção 4 (Sair)
+      # Espera: "Nenhum produto cadastrado"
+      - name: Smoke test — lista vazia
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Executa a Main com entradas simuladas (2 = listar; ENTER; 4 = sair; ENTER)
+          INPUT=$'2\n\n4\n'
+          # Ajuste o package/classpath se necessário (com.sces.Main)
+          java -cp target/classes com.sces.Main <<< "$INPUT" | tee smoke_list_vazia.log
+          grep -q "Nenhum produto cadastrado" smoke_list_vazia.log
+
+      # 🔎 Smoke test 2: Números/condições inválidas
+      # Tentativa: Adicionar estoque com quantidade 0 (inválida) e/ou ID inexistente
+      # Fluxo: opção 3 (adicionar) -> ID 1 -> quantidade 0 -> ENTER -> 4 (sair)
+      # Espera (uma das mensagens a seguir, conforme sua Main):
+      #  - "Não foi possível atualizar estoque. Verifique o ID/quantidade."
+      #  - ou "Valor inválido. Digite um número inteiro." (se alimentar não-inteiro)
+      - name: Smoke test — número/condição inválida
+        shell: bash
+        run: |
+          set -euo pipefail
+          INPUT=$'3\n1\n0\n\n4\n'
+          java -cp target/classes com.sces.Main <<< "$INPUT" | tee smoke_invalido.log
+          # Verifica qualquer uma das mensagens esperadas
+          if grep -q "Não foi possível atualizar estoque. Verifique o ID/quantidade." smoke_invalido.log; then
+            echo "OK: Mensagem de condição inválida encontrada."
+          elif grep -q "Valor inválido. Digite um número inteiro." smoke_invalido.log; then
+            echo "OK: Mensagem de número inválido encontrada."
+          else
+            echo "Falhou: não encontrou mensagem de validação esperada."
+            echo "Saída:"
+            cat smoke_invalido.log
+            exit 1
+          fi
+
+      # Artefatos úteis para inspecionar em caso de falha
       - name: Upload Surefire reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -42,4 +84,14 @@ jobs:
           path: |
             **/target/surefire-reports/
             **/target/failsafe-reports/
+          if-no-files-found: ignore
+
+      - name: Upload smoke logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-logs
+          path: |
+            smoke_list_vazia.log
+            smoke_invalido.log
           if-no-files-found: ignore
