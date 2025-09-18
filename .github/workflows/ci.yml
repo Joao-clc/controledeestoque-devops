@@ -1,32 +1,56 @@
-name: CI - Build Java
+name: CI
 
 on:
   push:
     branches:
       - main
-      - master
-      - feature/*
+      - develop
+      - 'feature/**'
   pull_request:
     branches:
       - main
-      - master
+      - develop
+
+# Evita filas longas: cancela execuções anteriores da mesma branch
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
+  test:
+    name: Build & Test (Java ${{ matrix.java }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ '21' ]   # se quiser testar também no 17: ['17','21']
 
     steps:
-    - name: Checkout do código
-      uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Instalar Java
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      - name: Set up Temurin JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java }}
+          cache: 'maven'
 
-    - name: Compilar arquivos Java
-      run: javac -d out src/main/java/com/sces/*.java
+      # Verifica se o POM é válido (pega problemas cedo)
+      - name: Validate
+        run: mvn -B -q -e -DskipTests=true validate
 
-    - name: Verificar compilação
-      run: echo "Compilação concluída com sucesso!"
+      # Compila e roda os testes
+      - name: Test
+        run: mvn -B -q -e test
+
+      # Publica relatórios (útil para inspeção ao debugar falhas)
+      - name: Upload Surefire reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports-java-${{ matrix.java }}
+          path: |
+            **/target/surefire-reports/
+            **/target/failsafe-reports/
+          if-no-files-found: ignore
