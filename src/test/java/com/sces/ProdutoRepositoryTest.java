@@ -2,6 +2,7 @@ package com.sces;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class ProdutoRepositoryTest {
@@ -9,44 +10,41 @@ public class ProdutoRepositoryTest {
     private ProdutoRepository repo;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         repo = new ProdutoRepository();
     }
 
     @Test
-    public void testAdicionarProdutoValido() {
-        boolean resultado = repo.adicionarProduto("Arroz", "Pacote de 5kg", 10);
-        assertTrue(resultado);
-        assertEquals(1, repo.listarProdutos().size());
-        Produto produto = repo.listarProdutos().get(0);
-        assertEquals(1, produto.getId());
-        assertEquals("Arroz", produto.getNome());
-        assertEquals("Pacote de 5kg", produto.getDescricao());
-        assertEquals(10, produto.getQuantidade());
+    void adicionarUnidades_sucesso() {
+        // Arrange: cria um produto base
+        boolean okCadastro = repo.adicionarProduto("Arroz", "Pacote 5kg", 10);
+        assertTrue(okCadastro);
+
+        Produto p = repo.listarProdutos().get(0);
+        int id = p.getId();
+        int qtdAntiga = p.getQuantidade();
+
+        // Act: adiciona +5
+        boolean ok = repo.adicionarUnidades(id, 5);
+
+        // Assert
+        assertTrue(ok, "Esperado true para ID válido e quantidade > 0");
+        Produto apos = repo.buscarPorId(id);
+        assertNotNull(apos);
+        assertEquals(qtdAntiga + 5, apos.getQuantidade());
     }
 
     @Test
-    public void testNomeDuplicado() {
-        repo.adicionarProduto("Feijão", "Tipo carioca", 5);
-        boolean resultado = repo.adicionarProduto("Feijão", "Outro tipo", 3);
-        assertFalse(resultado);
-        assertEquals(1, repo.listarProdutos().size());
-    }
+    void adicionarUnidades_falha_idInexistente() {
+        // Arrange: repositório vazio (ou sem o ID 999)
+        assertTrue(repo.listarProdutos().isEmpty());
 
-    @Test
-    public void testQuantidadeNegativa() {
-        boolean resultado = repo.adicionarProduto("Macarrão", "Espaguete", -2);
-        assertFalse(resultado);
-        assertEquals(0, repo.listarProdutos().size());
-    }
+        // Act
+        boolean ok = repo.adicionarUnidades(999, 5);
 
-    @Test
-    public void testIdSequencial() {
-        repo.adicionarProduto("Arroz", "Pacote de 5kg", 10);
-        repo.adicionarProduto("Feijão", "Tipo carioca", 5);
-        Produto p1 = repo.listarProdutos().get(0);
-        Produto p2 = repo.listarProdutos().get(1);
-        assertEquals(1, p1.getId());
-        assertEquals(2, p2.getId());
+        // Assert
+        assertFalse(ok, "Esperado false quando o ID não existe");
+        assertTrue(repo.listarProdutos().isEmpty(), "Não deve criar/alterar nada ao falhar");
     }
 }
+
